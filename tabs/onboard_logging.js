@@ -88,6 +88,48 @@ onboardLoggingTab.initialize = function (callback) {
      * setting is checked, and the tab says so instead of claiming a save it
      * cannot vouch for.
      */
+    /*
+     * Keep the second gyro's two switches telling the same story as the firmware.
+     *
+     * Sampling the second gyro and averaging it into the control path are one
+     * setting each, but they are not independent: turning the averaging on
+     * samples the sensor by itself, and once it is in the control path its raw
+     * samples travel with the first gyro's under the Gyro RAW field rather than
+     * as a separate one. Leaving both switches on screen in that state would
+     * offer a choice that has already been made, and show "sample: off" beside a
+     * firmware that is sampling.
+     *
+     * So: with no such setting in the firmware - a board with one gyro - the
+     * field has nothing to log and goes; with the averaging on, both switches go
+     * and a line says why; with it off, they stand as they are.
+     */
+    function applyDualGyroCoherence() {
+        const field = $('#BLACKBOX_FEATURE_GYRO_SECONDARY').closest('.checkbox');
+        const sampling = $('#gyro_secondary_enabled').parents('.setting-container:first');
+        const note = $('#dualGyroImpliedNote');
+
+        note.hide();
+
+        mspHelper.getSetting('gyro_fusion').then(function (setting) {
+            if (!setting) {
+                field.hide();          // one gyro: there is no second one to log
+                return;
+            }
+            if (Number(setting.value) !== 0) {
+                field.hide();
+                sampling.hide();
+                note.find('p').text(i18n.getMessage('onboardLoggingSecondaryGyroImplied'));
+                note.show();
+            } else {
+                field.show();
+                sampling.show();
+            }
+        }).catch(function () {
+            /* Nothing read back, so nothing is known: leave the field alone
+             * rather than hiding a switch the user may need. */
+        });
+    }
+
     function save_secondary_gyro_verified() {
         const wanted = $('#gyro_secondary_enabled').is(':checked') ? 1 : 0;
 
@@ -206,6 +248,8 @@ onboardLoggingTab.initialize = function (callback) {
                     ])
                 blackboxFieldsDiv.append(checkbox);
             }
+
+            applyDualGyroCoherence();
 
             populateLoggingRates();
             populateDevices();

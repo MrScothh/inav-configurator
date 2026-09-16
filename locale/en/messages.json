@@ -1163,6 +1163,12 @@
     "configurationFeatures": {
         "message": "Other Features"
     },
+    "configurationGyroFusion": {
+        "message": "Dual IMU"
+    },
+    "configurationGyroFusionHelp": {
+        "message": "On a board with two gyros, what to do with the second one. OFF leaves it out of the control path. AVERAGE feeds the mean of the two to the filters and the controller, which lowers uncorrelated sensor noise. It is not redundancy: two sensors that disagree cannot say which one is wrong, so if they disagree persistently the averaging stops and the first gyro flies alone until the next boot."
+    },
     "configurationReceiver": {
         "message": "Receiver Mode"
     },
@@ -6247,6 +6253,9 @@
     },
     "blackboxGyroSecondaryEnabled": {
         "message": "Sample secondary IMU (dual-gyro boards)"
+    },
+    "onboardLoggingSecondaryGyroImplied": {
+        "message": "Dual IMU is on, so the second gyro is already being sampled, and its raw samples are logged with the Gyro RAW field rather than as a separate one."
     },
     "BLACKBOX_FEATURE_NAV_ACC": {
         "message": "Navigation accelerometer"
