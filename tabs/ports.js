@@ -436,33 +436,6 @@ portsTab.initialize = function (callback) {
             });
         }
 
-        /* Sends the writes one by one, then onDone. The first one refused, by the
-         * FC or by the parse-failure guard, stops them and calls onRefused with
-         * how many went through; the firmware takes a pad from whichever pin held
-         * it, so the order does not matter. */
-        function sendPins(writes, onDone, onRefused) {
-            let accepted = 0;
-            (function sendNext() {
-                if (accepted === writes.length) {
-                    onDone();
-                    return;
-                }
-                const queued = MSP.send_message(MSPCodes.MSP2_INAV_SET_SERIAL_PAD, writes[accepted], false, function (result) {
-                    // the FC answers a pad it cannot use with an error, which still completes the request
-                    if (result === false || MSP.unsupported) {
-                        onRefused(accepted);
-                        return;
-                    }
-                    accepted++;
-                    sendNext();
-                });
-                // the guard reports its refusal itself and never calls back
-                if (!queued) {
-                    onRefused(accepted);
-                }
-            })();
-        }
-
         function save_to_eeprom() {
             MSP.send_message(MSPCodes.MSP_EEPROM_WRITE, false, false, on_saved_handler);
         }
@@ -481,6 +454,33 @@ portsTab.initialize = function (callback) {
         }
     }
 };
+
+/* Sends the writes one by one, then onDone. The first one refused, by the
+ * FC or by the parse-failure guard, stops them and calls onRefused with
+ * how many went through; the firmware takes a pad from whichever pin held
+ * it, so the order does not matter. */
+function sendPins(writes, onDone, onRefused) {
+    let accepted = 0;
+    (function sendNext() {
+        if (accepted === writes.length) {
+            onDone();
+            return;
+        }
+        const queued = MSP.send_message(MSPCodes.MSP2_INAV_SET_SERIAL_PAD, writes[accepted], false, function (result) {
+            // the FC answers a pad it cannot use with an error, which still completes the request
+            if (result === false || MSP.unsupported) {
+                onRefused(accepted);
+                return;
+            }
+            accepted++;
+            sendNext();
+        });
+        // the guard reports its refusal itself and never calls back
+        if (!queued) {
+            onRefused(accepted);
+        }
+    })();
+}
 
 /* TX and RX side by side where the table still fits on one line with them so, stacked where that would wrap
  * the other cells: measured rather than tied to a window width, so a longer translation moves the threshold. */
