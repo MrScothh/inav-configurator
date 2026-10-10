@@ -44,15 +44,17 @@ portsTab.initialize = function (callback) {
              * Smart ESC driver this comes back as an unsupported command, and
              * that is what keeps ESC_SRXL2 out of the list: a port assigned to
              * a function the firmware cannot perform is never opened. */
-            MSP.send_message(MSPCodes.MSP2_INAV_ESC_SRXL2_STATUS, false, false, function () {
-                /* Firmware without the feature answers unsupported, which leaves
-                 * the list empty and the Pins column hidden. */
-                MSP.send_message(MSPCodes.MSP2_INAV_SERIAL_PADS, false, false, function () {
-                    import('./ports.html?raw').then(({default: html}) => GUI.load(html, on_tab_loaded_handler));
-                });
-            });
+            MSP.send_message(MSPCodes.MSP2_INAV_ESC_SRXL2_STATUS, false, false, loadPadsAndTab);
         });
     });
+
+    /* Firmware without the feature answers unsupported, which leaves the list
+     * empty and the Pins column hidden. */
+    function loadPadsAndTab() {
+        MSP.send_message(MSPCodes.MSP2_INAV_SERIAL_PADS, false, false, function () {
+            import('./ports.html?raw').then(({default: html}) => GUI.load(html, on_tab_loaded_handler));
+        });
+    }
 
     function checkMSPPortCount(excludeCheckbox) {
         let mspCount = 0;
@@ -239,21 +241,6 @@ portsTab.initialize = function (callback) {
             pinsResizeObserver.observe($('.tab-ports .content_wrapper')[0]);
             arrangePins();
         }
-    }
-
-    /* TX and RX side by side where the table still fits on one line with them so, stacked where that would wrap
-     * the other cells: measured rather than tied to a window width, so a longer translation moves the threshold. */
-    function arrangePins() {
-        const table = document.querySelector('.tab-ports table.ports.pins');
-        if (!table) {
-            return;
-        }
-        table.classList.add('pinsSideBySide');
-        const available = table.getBoundingClientRect().width;
-        table.style.width = 'max-content';
-        const needed = table.getBoundingClientRect().width;
-        table.style.width = '';
-        table.classList.toggle('pinsSideBySide', needed <= available);
     }
 
     /* What choosing the pad costs: a motor or servo the mixer drives there keeps
@@ -472,6 +459,21 @@ portsTab.initialize = function (callback) {
         }
     }
 };
+
+/* TX and RX side by side where the table still fits on one line with them so, stacked where that would wrap
+ * the other cells: measured rather than tied to a window width, so a longer translation moves the threshold. */
+function arrangePins() {
+    const table = document.querySelector('.tab-ports table.ports.pins');
+    if (!table) {
+        return;
+    }
+    table.classList.add('pinsSideBySide');
+    const available = table.getBoundingClientRect().width;
+    table.style.width = 'max-content';
+    const needed = table.getBoundingClientRect().width;
+    table.style.width = '';
+    table.classList.toggle('pinsSideBySide', needed <= available);
+}
 
 function updateDefaultBaud(baudSelect, column) {
     let section = $("#" + baudSelect);
