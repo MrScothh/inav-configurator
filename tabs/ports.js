@@ -417,27 +417,49 @@ portsTab.initialize = function (callback) {
         }
 
         function savePins(next) {
-            const changes = $('.tab-ports select.uartPin').filter(function () {
+            const $changed = $('.tab-ports select.uartPin').filter(function () {
                 return $(this).val() !== $(this).data('saved');
-            }).map(function () {
-                const identifier = $(this).closest('.portConfiguration').data('serialPort').identifier;
-                return [[identifier, $(this).data('direction'), Number($(this).val())]];
-            }).get();
+            });
+            const toWrite = (select, pad) => [$(select).closest('.portConfiguration').data('serialPort').identifier,
+                $(select).data('direction'), Number(pad)];
+            const changes = $changed.get().map(select => toWrite(select, $(select).val()));
+            const previous = $changed.get().map(select => toWrite(select, $(select).data('saved')));
 
-            (function sendNext() {
-                const change = changes.shift();
-                if (!change) {
-                    next();
+            sendPins(changes, next, function (accepted) {
+                if (accepted === 0) {
+                    GUI.log(i18n.getMessage('portsPinRefused'));
                     return;
                 }
-                MSP.send_message(MSPCodes.MSP2_INAV_SET_SERIAL_PAD, change, false, function (result) {
+                // the writes accepted so far sit in the FC's RAM, where a save from another tab would keep them
+                sendPins(previous, () => GUI.log(i18n.getMessage('portsPinRefused')),
+                    () => GUI.log(i18n.getMessage('portsPinRefusedNotUndone')));
+            });
+        }
+
+        /* Sends the writes one by one, then onDone. The first one refused, by the
+         * FC or by the parse-failure guard, stops them and calls onRefused with
+         * how many went through; the firmware takes a pad from whichever pin held
+         * it, so the order does not matter. */
+        function sendPins(writes, onDone, onRefused) {
+            let accepted = 0;
+            (function sendNext() {
+                if (accepted === writes.length) {
+                    onDone();
+                    return;
+                }
+                const queued = MSP.send_message(MSPCodes.MSP2_INAV_SET_SERIAL_PAD, writes[accepted], false, function (result) {
                     // the FC answers a pad it cannot use with an error, which still completes the request
                     if (result === false || MSP.unsupported) {
-                        GUI.log(i18n.getMessage('portsPinRefused'));
+                        onRefused(accepted);
                         return;
                     }
+                    accepted++;
                     sendNext();
                 });
+                // the guard reports its refusal itself and never calls back
+                if (!queued) {
+                    onRefused(accepted);
+                }
             })();
         }
 

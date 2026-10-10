@@ -5298,6 +5298,9 @@
     "portsPinRefused": {
         "message": "The flight controller refused a pin choice in the Pins column. Nothing was saved."
     },
+    "portsPinRefusedNotUndone": {
+        "message": "The flight controller refused a pin choice in the Pins column, and the choices sent before it could not be taken back. Nothing was saved: reconnect before saving from another tab."
+    },
     "appUpdateNotificationHeader": {
         "message": "New Configurator version available."
     },
